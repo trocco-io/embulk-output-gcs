@@ -14,7 +14,9 @@ import org.embulk.spi.unit.LocalFile;
 
 import java.io.IOException;
 import java.security.GeneralSecurityException;
+import java.util.IllegalFormatException;
 import java.util.List;
+import java.util.Locale;
 import java.util.Optional;
 import java.util.function.Function;
 
@@ -49,6 +51,8 @@ public class GcsOutputPlugin implements FileOutputPlugin
                 throw new ConfigException("If auth_method is private_key, you have to set both service_account_email and p12_keyfile");
             }
         }
+
+        validateSequenceFormat(task.getSequenceFormat());
 
         return resume(task.dump(), taskCount, control);
     }
@@ -114,5 +118,16 @@ public class GcsOutputPlugin implements FileOutputPlugin
                 return file.getPath().toString();
             }
         };
+    }
+
+    private void validateSequenceFormat(String sequenceFormat)
+    {
+        try {
+            @SuppressWarnings("unused")
+            String dontCare = String.format(Locale.ENGLISH, sequenceFormat, 0, 0);
+        }
+        catch (IllegalFormatException ex) {
+            throw new ConfigException("Invalid sequence_format: parameter for file output plugin", ex);
+        }
     }
 }
