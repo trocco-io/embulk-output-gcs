@@ -29,7 +29,7 @@ import org.junit.Test;
 import static org.embulk.output.gcs.GcsOutputPlugin.CONFIG_MAPPER;
 import static org.embulk.output.gcs.GcsOutputPlugin.CONFIG_MAPPER_FACTORY;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.Assume.assumeTrue;
 
 import java.nio.file.NoSuchFileException;
 import java.security.InvalidKeyException;
@@ -54,12 +54,12 @@ public class TestGcsAuthentication
     @BeforeClass
     public static void initializeConstant()
     {
-        GCP_EMAIL = Optional.of(System.getenv("GCP_EMAIL"));
-        GCP_JSON_KEYFILE = Optional.of(System.getenv("GCP_JSON_KEYFILE"));
-        GCP_P12_KEYFILE = Optional.of(System.getenv("GCP_PRIVATE_KEYFILE"));
+        GCP_EMAIL = Optional.ofNullable(System.getenv("GCP_EMAIL"));
+        GCP_JSON_KEYFILE = Optional.ofNullable(System.getenv("GCP_JSON_KEYFILE"));
+        GCP_P12_KEYFILE = Optional.ofNullable(System.getenv("GCP_PRIVATE_KEYFILE"));
         GCP_BUCKET = System.getenv("GCP_BUCKET");
         // skip test cases, if environment variables are not set.
-        assumeNotNull(GCP_EMAIL, GCP_P12_KEYFILE, GCP_JSON_KEYFILE, GCP_BUCKET);
+        assumeTrue(GCP_EMAIL.isPresent() && GCP_P12_KEYFILE.isPresent() && GCP_JSON_KEYFILE.isPresent() && GCP_BUCKET != null);
     }
 
     @Rule

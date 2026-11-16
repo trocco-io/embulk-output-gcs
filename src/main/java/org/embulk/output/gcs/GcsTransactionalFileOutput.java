@@ -21,7 +21,6 @@ import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
-import com.google.common.annotations.VisibleForTesting;
 import org.embulk.config.TaskReport;
 import org.embulk.spi.Buffer;
 import org.embulk.spi.TransactionalFileOutput;
@@ -144,7 +143,6 @@ public class GcsTransactionalFileOutput implements TransactionalFileOutput
      * And in many cases, user don't intend of creating "/" directory under the bucket.
      * This method normalizes path when it contains "./" and "/" and its variations at the beginning
      */
-    @VisibleForTesting
     public static String generateRemotePath(String pathPrefix, String sequenceFormat, int taskIndex, int fileIndex, String pathSuffix)
     {
         String path = pathPrefix + String.format(sequenceFormat, taskIndex, fileIndex) + pathSuffix;

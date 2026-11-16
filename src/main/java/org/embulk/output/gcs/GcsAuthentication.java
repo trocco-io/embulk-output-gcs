@@ -16,8 +16,7 @@
 
 package org.embulk.output.gcs;
 
-import com.google.api.client.auth.oauth2.TokenResponseException;
-import com.google.api.client.googleapis.json.GoogleJsonResponseException;
+import com.google.api.client.http.HttpResponseException;
 import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.apache.ApacheHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
@@ -92,9 +91,12 @@ public class GcsAuthentication
         PrivateKey privateKey = SecurityUtils.loadPrivateKeyFromKeyStore(SecurityUtils.getPkcs12KeyStore(),
                 new FileInputStream(p12), task.getStorePass(), "privatekey", task.getKeyPass());
         HttpTransportFactory transportFactory = () -> httpTransport;
-        GoogleCredentials credentials = new ServiceAccountCredentials(null, serviceAccountEmail.get(),
-            privateKey, null, Collections.singleton(StorageScopes.DEVSTORAGE_READ_WRITE), transportFactory, null);
-        return credentials;
+        return ServiceAccountCredentials.newBuilder()
+                .setClientEmail(serviceAccountEmail.get())
+                .setPrivateKey(privateKey)
+                .setScopes(Collections.singleton(StorageScopes.DEVSTORAGE_READ_WRITE))
+                .setHttpTransportFactory(transportFactory)
+                .build();
     }
 
     private GoogleCredentials getServiceAccountCredentialFromJsonFile() throws IOException
@@ -111,7 +113,9 @@ public class GcsAuthentication
     private GoogleCredentials getComputeCredential() throws IOException
     {
         HttpTransportFactory transportFactory = () -> httpTransport;
-        ComputeEngineCredentials credentials = new ComputeEngineCredentials(transportFactory);
+        ComputeEngineCredentials credentials = ComputeEngineCredentials.newBuilder()
+                .setHttpTransportFactory(transportFactory)
+                .build();
         credentials.refreshAccessToken();
         return credentials;
     }
@@ -146,31 +150,10 @@ public class GcsAuthentication
                         @Override
                         public boolean isRetryableException(Exception exception)
                         {
-                            if (exception instanceof GoogleJsonResponseException || exception instanceof TokenResponseException || exception instanceof StorageException) {
-                                int statusCode;
-                                if (exception instanceof GoogleJsonResponseException) {
-                                    if (((GoogleJsonResponseException) exception).getDetails() == null) {
-                                        String content = "";
-                                        if (((GoogleJsonResponseException) exception).getContent() != null) {
-                                            content = ((GoogleJsonResponseException) exception).getContent();
-                                        }
-                                        log.warn("Invalid response was returned : {}", content);
-                                        return true;
-                                    }
-                                    statusCode = ((GoogleJsonResponseException) exception).getDetails().getCode();
-                                }
-                                else if (exception instanceof TokenResponseException) {
-                                    statusCode = ((TokenResponseException) exception).getStatusCode();
-                                }
-                                else {
-                                    statusCode = ((StorageException) exception).getCode();
-                                }
-
-                                if (statusCode / 100 == 4) {
-                                    return false;
-                                }
-                            }
-                            return true;
+                            // 4xx (bad credentials, missing bucket, no permission) is not retryable.
+                            // The current Google client wraps credential failures as StorageException with code 0 and
+                            // keeps the HTTP status (e.g. 400 invalid_grant) in the cause chain, so look through it.
+                            return httpStatusCode(exception) / 100 != 4;
                         }
 
                         @Override
@@ -195,28 +178,32 @@ public class GcsAuthentication
                     });
         }
         catch (RetryGiveupException ex) {
-            if (ex.getCause() instanceof GoogleJsonResponseException || ex.getCause() instanceof TokenResponseException || ex.getCause() instanceof StorageException) {
-                int statusCode = 0;
-                if (ex.getCause() instanceof GoogleJsonResponseException) {
-                    if (((GoogleJsonResponseException) ex.getCause()).getDetails() != null) {
-                        statusCode = ((GoogleJsonResponseException) ex.getCause()).getDetails().getCode();
-                    }
-                }
-                else if (ex.getCause() instanceof TokenResponseException) {
-                    statusCode = ((TokenResponseException) ex.getCause()).getStatusCode();
-                }
-                else {
-                    statusCode = ((StorageException) ex.getCause()).getCode();
-                }
-                if (statusCode / 100 == 4) {
-                    throw new ConfigException(ex);
-                }
+            if (httpStatusCode(ex.getCause()) / 100 == 4) {
+                throw new ConfigException(ex);
             }
             throw new RuntimeException(ex);
         }
         catch (InterruptedException ex) {
             throw new InterruptedIOException();
         }
+    }
+
+    /**
+     * Returns the HTTP status code behind an exception, or 0 if there is none.
+     * Looks through the cause chain because the Google client wraps API and credential failures
+     * (e.g. StorageException(code 0) -> GoogleAuthException -> HttpResponseException 400).
+     */
+    static int httpStatusCode(final Throwable throwable)
+    {
+        for (Throwable t = throwable; t != null; t = t.getCause()) {
+            if (t instanceof HttpResponseException) {
+                return ((HttpResponseException) t).getStatusCode();
+            }
+            if (t instanceof StorageException && ((StorageException) t).getCode() != 0) {
+                return ((StorageException) t).getCode();
+            }
+        }
+        return 0;
     }
 
     private Function<LocalFile, String> localFileToPathString()

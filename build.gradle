@@ -5,6 +5,13 @@ plugins {
     id "signing"
     id "maven-publish"
     id "org.embulk.embulk-plugins" version "0.4.2"
+    id "com.github.johnrengelman.shadow" version "5.2.0" apply false
+    id "com.palantir.git-version" version "3.0.0"
+}
+
+configurations {
+    compileFlat
+    compile.extendsFrom compileFlat
 }
 
 repositories {
@@ -15,7 +22,14 @@ sourceCompatibility = 1.8
 targetCompatibility = 1.8
 
 group = "org.embulk"
-version = "0.6.0-SNAPSHOT"
+version = {
+    def vd = versionDetails()
+    if (vd.commitDistance == 0 && vd.lastTag ==~ /^[0-9]+\.[0-9]+\.[0-9]+([.-][.a-zA-Z0-9-]+)?/) {
+        vd.lastTag
+    } else {
+        "0.0.0.${vd.gitHash}"
+    }
+}()
 description = "Dumps records to Google Cloud Storage."
 
 tasks.withType(JavaCompile) {
@@ -49,23 +63,11 @@ dependencies {
     compile 'com.fasterxml.jackson.datatype:jackson-datatype-jdk8:2.6.7'
 
     compile 'javax.validation:validation-api:1.1.0.Final'
-    compile 'com.google.guava:guava:18.0'
 
-    //we use version 1.2.0 due to prevent conflict guava and jackson version with embulk
-    compile ("com.google.cloud:google-cloud-storage:1.2.0"){
-        exclude group: 'com.google.cloud', module: 'google-cloud-core'
-        exclude group: 'com.google.cloud', module: 'google-cloud-core-http'
-        exclude group: "commons-logging", module: "commons-logging"
-    }
-    compile ("com.google.cloud:google-cloud-core:1.2.0"){
-        exclude group: 'com.google.guava', module: 'guava'
-        exclude group: "commons-logging", module: "commons-logging"
-    }
-    compile ("com.google.cloud:google-cloud-core-http:1.2.0"){
-        exclude group: 'com.google.guava', module: 'guava'
-        exclude group: 'com.google.cloud', module: 'google-cloud-core'
-        exclude group: "commons-logging", module: "commons-logging"
-    }
+    // The Google Cloud Storage client, the Google auth library and the AWS SDK are bundled (with Guava, Jackson,
+    // gRPC and OpenCensus relocated) in the shadow JAR, which is extracted into the plugin root project JAR.
+    // See shadow-google-cloud-storage/build.gradle.
+    compileFlat project(path: ":shadow-google-cloud-storage", configuration: "shadow")
 
     // Instead of "commons-logging:commons-logging:1.2" that is required from "google-cloud-storage",
     // we use "jcl-over-slf4j" because Embulk is based on SLF4J.
@@ -101,6 +103,9 @@ javadoc {
 jar {
     from rootProject.file("LICENSE")
     from rootProject.file("NOTICE")
+    from {
+        configurations.compileFlat.collect { it.isDirectory() ? it : zipTree(it) }
+    }
 }
 
 sourcesJar {
@@ -152,9 +157,9 @@ publishing {
                 }
 
                 scm {
-                    connection = "scm:git:git://github.com/embulk/embulk-output-gcs.git"
-                    developerConnection = "scm:git:git@github.com:embulk/embulk-output-gcs.git"
-                    url = "https://github.com/embulk/embulk-output-gcs"
+                    connection = "scm:git:git://github.com/trocco-io/embulk-output-gcs.git"
+                    developerConnection = "scm:git:git@github.com:trocco-io/embulk-output-gcs.git"
+                    url = "https://github.com/trocco-io/embulk-output-gcs"
                 }
             }
         }
@@ -185,11 +190,14 @@ gem {
     authors = [ "Kazuyuki Honda" ]
     email = [ "hakobera@gmail.com" ]
     summary = "Google Cloud Storage output plugin for Embulk"
-    homepage = "https://github.com/embulk/embulk-output-gcs"
+    homepage = "https://github.com/trocco-io/embulk-output-gcs"
     licenses = [ "Apache-2.0" ]
     from rootProject.file("LICENSE")
     from rootProject.file("NOTICE_GEM")
     rename ("NOTICE_GEM", "NOTICE")
+
+    // The contents of "shadow-google-cloud-storage-*.jar" are already mixed into "embulk-output-gcs-*.jar".
+    exclude { it.file.name.contains "shadow-google-cloud-storage" }
 }
 
 gemPush {

@@ -52,7 +52,7 @@ import static org.junit.Assert.assertEquals;
 import static org.junit.Assert.assertFalse;
 import static org.junit.Assert.assertTrue;
 import static org.junit.Assert.fail;
-import static org.junit.Assume.assumeNotNull;
+import static org.junit.Assume.assumeTrue;
 
 import java.io.BufferedReader;
 import java.io.ByteArrayOutputStream;
@@ -96,12 +96,12 @@ public class TestGcsOutputPlugin
     @BeforeClass
     public static void initializeConstant()
     {
-        GCP_EMAIL = Optional.of(System.getenv("GCP_EMAIL"));
-        GCP_P12_KEYFILE = Optional.of(System.getenv("GCP_PRIVATE_KEYFILE"));
-        GCP_JSON_KEYFILE = Optional.of(System.getenv("GCP_JSON_KEYFILE"));
+        GCP_EMAIL = Optional.ofNullable(System.getenv("GCP_EMAIL"));
+        GCP_P12_KEYFILE = Optional.ofNullable(System.getenv("GCP_PRIVATE_KEYFILE"));
+        GCP_JSON_KEYFILE = Optional.ofNullable(System.getenv("GCP_JSON_KEYFILE"));
         GCP_BUCKET = System.getenv("GCP_BUCKET");
         // skip test cases, if environment variables are not set.
-        assumeNotNull(GCP_EMAIL, GCP_P12_KEYFILE, GCP_JSON_KEYFILE, GCP_BUCKET);
+        assumeTrue(GCP_EMAIL.isPresent() && GCP_P12_KEYFILE.isPresent() && GCP_JSON_KEYFILE.isPresent() && GCP_BUCKET != null);
 
         GCP_BUCKET_DIRECTORY = System.getenv("GCP_BUCKET_DIRECTORY") != null ? getDirectory(System.getenv("GCP_BUCKET_DIRECTORY")) : getDirectory("");
         GCP_PATH_PREFIX = GCP_BUCKET_DIRECTORY + "output_";

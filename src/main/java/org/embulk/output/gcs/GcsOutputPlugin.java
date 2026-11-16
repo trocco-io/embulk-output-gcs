@@ -20,8 +20,6 @@ import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
-import com.google.common.annotations.VisibleForTesting;
-import com.google.common.base.Throwables;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
@@ -126,7 +124,6 @@ public class GcsOutputPlugin implements FileOutputPlugin
         }
     }
 
-    @VisibleForTesting
     public Storage createClient(final PluginTask task)
     {
         try {
@@ -203,7 +200,7 @@ public class GcsOutputPlugin implements FileOutputPlugin
                     });
         }
         catch (RetryGiveupException ex) {
-            throw Throwables.propagate(ex.getCause());
+            throw propagate(ex.getCause());
         }
         catch (InterruptedException ex) {
             throw new InterruptedIOException();
@@ -252,10 +249,26 @@ public class GcsOutputPlugin implements FileOutputPlugin
                     });
         }
         catch (RetryGiveupException ex) {
-            throw Throwables.propagate(ex.getCause());
+            throw propagate(ex.getCause());
         }
         catch (InterruptedException ex) {
             throw new InterruptedIOException();
         }
+    }
+
+    /**
+     * Rethrows {@code t} as-is if it is a {@link RuntimeException} or an {@link Error}, otherwise wrapped in a
+     * {@link RuntimeException}. Same semantics as Guava's {@code Throwables.propagate}, which is no longer on the
+     * plugin's compile classpath (Guava is bundled and relocated inside the shadow JAR).
+     */
+    private static RuntimeException propagate(final Throwable t)
+    {
+        if (t instanceof RuntimeException) {
+            throw (RuntimeException) t;
+        }
+        if (t instanceof Error) {
+            throw (Error) t;
+        }
+        throw new RuntimeException(t);
     }
 }
