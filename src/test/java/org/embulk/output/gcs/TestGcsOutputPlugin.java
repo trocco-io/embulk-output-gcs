@@ -96,17 +96,23 @@ public class TestGcsOutputPlugin
     @BeforeClass
     public static void initializeConstant()
     {
-        GCP_EMAIL = Optional.ofNullable(System.getenv("GCP_EMAIL"));
-        GCP_P12_KEYFILE = Optional.ofNullable(System.getenv("GCP_PRIVATE_KEYFILE"));
-        GCP_JSON_KEYFILE = Optional.ofNullable(System.getenv("GCP_JSON_KEYFILE"));
-        GCP_BUCKET = System.getenv("GCP_BUCKET");
+        GCP_EMAIL = env("GCP_EMAIL");
+        GCP_P12_KEYFILE = env("GCP_PRIVATE_KEYFILE");
+        GCP_JSON_KEYFILE = env("GCP_JSON_KEYFILE");
+        GCP_BUCKET = env("GCP_BUCKET").orElse(null);
         // skip test cases, if environment variables are not set.
         assumeTrue(GCP_EMAIL.isPresent() && GCP_P12_KEYFILE.isPresent() && GCP_JSON_KEYFILE.isPresent() && GCP_BUCKET != null);
 
-        GCP_BUCKET_DIRECTORY = System.getenv("GCP_BUCKET_DIRECTORY") != null ? getDirectory(System.getenv("GCP_BUCKET_DIRECTORY")) : getDirectory("");
+        GCP_BUCKET_DIRECTORY = getDirectory(env("GCP_BUCKET_DIRECTORY").orElse(""));
         GCP_PATH_PREFIX = GCP_BUCKET_DIRECTORY + "output_";
         LOCAL_PATH_PREFIX = GcsOutputPlugin.class.getClassLoader().getResource("sample_01.csv").getPath();
         GCP_APPLICATION_NAME = "embulk-output-gcs";
+    }
+
+    // GitHub Actions expands a missing repository secret to an empty string, which must count as "not set".
+    private static Optional<String> env(final String name)
+    {
+        return Optional.ofNullable(System.getenv(name)).filter(value -> !value.isEmpty());
     }
 
     @Rule

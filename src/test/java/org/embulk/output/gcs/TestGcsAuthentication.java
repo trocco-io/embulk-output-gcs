@@ -54,12 +54,18 @@ public class TestGcsAuthentication
     @BeforeClass
     public static void initializeConstant()
     {
-        GCP_EMAIL = Optional.ofNullable(System.getenv("GCP_EMAIL"));
-        GCP_JSON_KEYFILE = Optional.ofNullable(System.getenv("GCP_JSON_KEYFILE"));
-        GCP_P12_KEYFILE = Optional.ofNullable(System.getenv("GCP_PRIVATE_KEYFILE"));
-        GCP_BUCKET = System.getenv("GCP_BUCKET");
+        GCP_EMAIL = env("GCP_EMAIL");
+        GCP_JSON_KEYFILE = env("GCP_JSON_KEYFILE");
+        GCP_P12_KEYFILE = env("GCP_PRIVATE_KEYFILE");
+        GCP_BUCKET = env("GCP_BUCKET").orElse(null);
         // skip test cases, if environment variables are not set.
         assumeTrue(GCP_EMAIL.isPresent() && GCP_P12_KEYFILE.isPresent() && GCP_JSON_KEYFILE.isPresent() && GCP_BUCKET != null);
+    }
+
+    // GitHub Actions expands a missing repository secret to an empty string, which must count as "not set".
+    private static Optional<String> env(final String name)
+    {
+        return Optional.ofNullable(System.getenv(name)).filter(value -> !value.isEmpty());
     }
 
     @Rule
