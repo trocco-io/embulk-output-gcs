@@ -21,6 +21,7 @@ import com.google.api.client.http.HttpTransport;
 import com.google.api.client.http.apache.ApacheHttpTransport;
 import com.google.api.client.json.jackson2.JacksonFactory;
 import com.google.api.client.util.SecurityUtils;
+import com.google.api.gax.retrying.RetrySettings;
 import com.google.api.services.storage.StorageScopes;
 import com.google.auth.http.HttpTransportFactory;
 import com.google.auth.oauth2.ComputeEngineCredentials;
@@ -31,27 +32,24 @@ import com.google.cloud.http.HttpTransportOptions;
 import com.google.cloud.storage.Storage;
 import com.google.cloud.storage.StorageException;
 import com.google.cloud.storage.StorageOptions;
+import com.google.cloud.storage.StorageRetryStrategy;
 import org.embulk.config.ConfigException;
 import org.embulk.util.config.units.LocalFile;
-import org.embulk.util.retryhelper.RetryExecutor;
-import org.embulk.util.retryhelper.RetryGiveupException;
-import org.embulk.util.retryhelper.Retryable;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
+import java.time.Duration;
 import java.util.Collections;
 import java.util.Optional;
 import java.util.function.Function;
 
 public class GcsAuthentication
 {
-    private final Logger log = LoggerFactory.getLogger(GcsAuthentication.class);
+    static final int CONNECT_TIMEOUT_MILLIS = 30000;
+    static final int READ_TIMEOUT_MILLIS = 30000;
     private final Optional<String> serviceAccountEmail;
     private final Optional<String> p12KeyFilePath;
     private final Optional<String> jsonKeyFilePath;
@@ -122,70 +120,58 @@ public class GcsAuthentication
 
     public Storage getGcsClient() throws ConfigException, IOException
     {
+        final TransportOptions transportOptions = HttpTransportOptions.newBuilder()
+                .setConnectTimeout(CONNECT_TIMEOUT_MILLIS)
+                .setReadTimeout(READ_TIMEOUT_MILLIS)
+                .build();
+
+        Storage client = StorageOptions.newBuilder()
+                .setCredentials(credentials)
+                .setTransportOptions(transportOptions)
+                .setRetrySettings(retrySettings(task))
+                // Retry every operation on transient failures, not only the idempotent ones.
+                .setStorageRetryStrategy(StorageRetryStrategy.getUniformStorageRetryStrategy())
+                .build().getService();
+
         try {
-            return RetryExecutor.builder()
-                    .withRetryLimit(task.getMaxConnectionRetry())
-                    .withInitialRetryWaitMillis(task.getInitialRetryIntervalMillis())
-                    .withMaxRetryWaitMillis(task.getMaximumRetryIntervalMillis())
-                    .build()
-                    .runInterruptible(new Retryable<Storage>() {
-                        @Override
-                        public Storage call() throws IOException, RetryGiveupException
-                        {
-                            final TransportOptions transportOptions = HttpTransportOptions.newBuilder()
-                                    .setConnectTimeout(30000) // in milliseconds
-                                    .setReadTimeout(30000) // in milliseconds
-                                    .build();
-
-                            Storage client = StorageOptions.newBuilder()
-                                    .setCredentials(credentials)
-                                    .setTransportOptions(transportOptions)
-                                    .build().getService();
-
-                            // For throw ConfigException when authentication is fail.
-                            client.list(task.getBucket(), Storage.BlobListOption.pageSize(1)).hasNextPage();
-                            return client;
-                        }
-
-                        @Override
-                        public boolean isRetryableException(Exception exception)
-                        {
-                            // 4xx (bad credentials, missing bucket, no permission) is not retryable.
-                            // The current Google client wraps credential failures as StorageException with code 0 and
-                            // keeps the HTTP status (e.g. 400 invalid_grant) in the cause chain, so look through it.
-                            return httpStatusCode(exception) / 100 != 4;
-                        }
-
-                        @Override
-                        public void onRetry(Exception exception, int retryCount, int retryLimit, int retryWait)
-                                throws RetryGiveupException
-                        {
-                            String message = String.format("GCS GET request failed. Retrying %d/%d after %d seconds. Message: %s: %s",
-                                    retryCount, retryLimit, retryWait / 1000, exception.getClass(), exception.getMessage());
-                            if (retryCount % 3 == 0) {
-                                log.warn(message, exception);
-                            }
-                            else {
-                                log.warn(message);
-                            }
-                        }
-
-                        @Override
-                        public void onGiveup(Exception firstException, Exception lastException)
-                                throws RetryGiveupException
-                        {
-                        }
-                    });
+            // For throw ConfigException when authentication is fail.
+            client.list(task.getBucket(), Storage.BlobListOption.pageSize(1)).hasNextPage();
         }
-        catch (RetryGiveupException ex) {
-            if (httpStatusCode(ex.getCause()) / 100 == 4) {
-                throw new ConfigException(ex);
-            }
-            throw new RuntimeException(ex);
+        catch (StorageException ex) {
+            throw configExceptionIfClientError(ex);
         }
-        catch (InterruptedException ex) {
-            throw new InterruptedIOException();
+        return client;
+    }
+
+    /**
+     * Retry budget for every call the client makes (bucket check, listing, deleting, upload chunks):
+     * max_connection_retry retries after the first attempt, waits doubling from initial_retry_interval_millis
+     * up to maximum_retry_interval_millis.
+     */
+    static RetrySettings retrySettings(PluginTask task)
+    {
+        int attempts = task.getMaxConnectionRetry() + 1;
+        long totalTimeoutMillis = (long) attempts * (task.getMaximumRetryIntervalMillis() + READ_TIMEOUT_MILLIS);
+        return StorageOptions.getDefaultRetrySettings().toBuilder()
+                .setMaxAttempts(attempts)
+                .setInitialRetryDelayDuration(Duration.ofMillis(task.getInitialRetryIntervalMillis()))
+                .setRetryDelayMultiplier(2.0)
+                .setMaxRetryDelayDuration(Duration.ofMillis(task.getMaximumRetryIntervalMillis()))
+                .setTotalTimeoutDuration(Duration.ofMillis(totalTimeoutMillis))
+                .build();
+    }
+
+    /**
+     * 4xx (bad credentials, missing bucket, no permission) is a configuration error; anything else is returned as-is.
+     * The current Google client wraps credential failures as StorageException with code 0 and keeps the HTTP status
+     * (e.g. 400 invalid_grant) in the cause chain, so look through it.
+     */
+    static RuntimeException configExceptionIfClientError(StorageException ex)
+    {
+        if (httpStatusCode(ex) / 100 == 4) {
+            return new ConfigException(ex);
         }
+        return ex;
     }
 
     /**
