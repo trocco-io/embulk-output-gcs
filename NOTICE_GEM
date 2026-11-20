@@ -5,6 +5,383 @@ This product includes software developed by Kazuyuki Honda, and in a part of the
 It was originally developed by Kazuyuki Honda (https://github.com/hakobera), and then transferred to the Embulk project.
 It was originally licenced under the MIT License before the transfer, and it is now licensed under the Apache Software License, Version 2.0.
 
+This product includes copies of class files of the following libraries, bundled in the plugin JAR
+(com.google.cloud:google-cloud-storage with its transitive dependencies, com.google.auth:google-auth-library,
+and the AWS SDK for Java v2). Libraries marked "relocated" have their Java packages renamed to avoid conflicts
+with Embulk's own dependencies.
+
+* com.fasterxml.jackson.core:jackson-annotations:2.22
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/FasterXML/jackson-annotations
+  * Its Java packages are relocated.
+* com.fasterxml.jackson.core:jackson-core:2.22.4
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/FasterXML/jackson-core
+  * Its Java packages are relocated.
+* com.fasterxml.jackson.core:jackson-databind:2.22.4
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/FasterXML/jackson-databind
+  * Its Java packages are relocated.
+* com.fasterxml.jackson.dataformat:jackson-dataformat-xml:2.22.4
+  * Licensed under the Apache License, Version 2.0.
+  * http://github.com/FasterXML/jackson-dataformat-xml
+  * Its Java packages are relocated.
+* com.fasterxml.jackson.datatype:jackson-datatype-jsr310:2.22.4
+  * Licensed under the Apache License, Version 2.0.
+  * http://github.com/FasterXML/jackson-modules-java8
+  * Its Java packages are relocated.
+* com.fasterxml.woodstox:woodstox-core:7.2.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/FasterXML/woodstox
+* com.google.android:annotations:4.1.1.4
+  * Licensed under the Apache License, Version 2.0.
+  * https://android.git.kernel.org/
+* com.google.api-client:google-api-client:2.9.2
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-api-java-client
+* com.google.api.grpc:gapic-google-cloud-storage-v2:2.78.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-cloud-java
+* com.google.api.grpc:grpc-google-cloud-storage-v2:2.78.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-cloud-java
+* com.google.api.grpc:proto-google-cloud-monitoring-v3:3.52.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-cloud-java
+* com.google.api.grpc:proto-google-cloud-storage-v2:2.78.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-cloud-java
+* com.google.api.grpc:proto-google-common-protos:2.81.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-cloud-java
+* com.google.api.grpc:proto-google-iam-v1:1.76.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-cloud-java
+* com.google.api:api-common:2.73.0
+  * Licensed under the 3-Clause BSD License.
+* com.google.api:gax-grpc:2.90.0
+  * Licensed under the 3-Clause BSD License.
+* com.google.api:gax-httpjson:2.90.0
+  * Licensed under the 3-Clause BSD License.
+* com.google.api:gax:2.90.0
+  * Licensed under the 3-Clause BSD License.
+* com.google.apis:google-api-services-storage:v1-rev20260524-2.0.0
+  * Licensed under the Apache License, Version 2.0.
+* com.google.auth:google-auth-library-credentials:1.57.0
+  * Licensed under the 3-Clause BSD License.
+  * https://github.com/googleapis/google-cloud-java
+* com.google.auth:google-auth-library-oauth2-http:1.57.0
+  * Licensed under the 3-Clause BSD License.
+  * https://github.com/googleapis/google-cloud-java
+* com.google.auto.value:auto-value-annotations:1.11.0
+  * Licensed under the Apache License, Version 2.0.
+  * http://github.com/google/auto
+* com.google.cloud.opentelemetry:detector-resources-support:0.31.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/GoogleCloudPlatform/opentelemetry-operations-java
+* com.google.cloud.opentelemetry:exporter-metrics:0.33.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/GoogleCloudPlatform/opentelemetry-operations-java
+* com.google.cloud.opentelemetry:shared-resourcemapping:0.33.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/GoogleCloudPlatform/opentelemetry-operations-java
+* com.google.cloud:google-cloud-core-grpc:2.80.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-cloud-java
+* com.google.cloud:google-cloud-core-http:2.80.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-cloud-java
+* com.google.cloud:google-cloud-core:2.80.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-cloud-java
+* com.google.cloud:google-cloud-monitoring:3.52.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-cloud-java
+* com.google.cloud:google-cloud-storage:2.78.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-cloud-java
+* com.google.code.findbugs:jsr305:3.0.2
+  * Licensed under the Apache License, Version 2.0.
+  * https://code.google.com/p/jsr-305/
+* com.google.code.gson:gson:2.14.0
+  * Licensed under the Apache License, Version 2.0.
+* com.google.errorprone:error_prone_annotations:2.50.0
+  * Licensed under the Apache License, Version 2.0.
+* com.google.guava:failureaccess:1.0.3
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/google/guava
+  * Its Java packages are relocated.
+* com.google.guava:guava:33.6.0-jre
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/google/guava
+  * Its Java packages are relocated.
+* com.google.guava:listenablefuture:9999.0-empty-to-avoid-conflict-with-guava
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/google/guava
+  * Its Java packages are relocated.
+* com.google.http-client:google-http-client-apache-v2:2.2.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-http-java-client
+* com.google.http-client:google-http-client-appengine:2.2.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-http-java-client
+* com.google.http-client:google-http-client-gson:2.2.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-http-java-client
+* com.google.http-client:google-http-client-jackson2:2.2.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-http-java-client
+* com.google.http-client:google-http-client:2.2.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-http-java-client
+* com.google.j2objc:j2objc-annotations:3.1
+  * Licensed under the Apache License, Version 2.0.
+  * http://github.com/google/j2objc
+* com.google.oauth-client:google-oauth-client:1.39.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/googleapis/google-oauth-java-client
+* com.google.protobuf:protobuf-java-util:4.33.6
+  * Licensed under the 3-Clause BSD License.
+  * https://github.com/protocolbuffers/protobuf
+* com.google.protobuf:protobuf-java:4.33.6
+  * Licensed under the 3-Clause BSD License.
+  * https://github.com/protocolbuffers/protobuf
+* com.google.re2j:re2j:1.8
+  * Licensed under Go License.
+  * https://github.com/google/re2j.git
+* commons-codec:commons-codec:1.18.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/apache/commons-codec
+* dev.cel:common:0.13.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/google/cel-java/tree/main
+* dev.cel:protobuf:0.13.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/google/cel-java/tree/main
+* dev.cel:runtime:0.13.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/google/cel-java/tree/main
+* io.grpc:grpc-alts:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-api:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-auth:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-context:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-core:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-googleapis:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-grpclb:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-inprocess:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-netty-shaded:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-opentelemetry:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-protobuf-lite:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-protobuf:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-rls:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-services:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-stub:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-util:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.grpc:grpc-xds:1.83.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/grpc/grpc-java
+  * Its Java packages are relocated.
+* io.opencensus:opencensus-api:0.31.1
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/census-instrumentation/opencensus-java
+  * Its Java packages are relocated.
+* io.opencensus:opencensus-contrib-http-util:0.31.1
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/census-instrumentation/opencensus-java
+  * Its Java packages are relocated.
+* io.opentelemetry.contrib:opentelemetry-gcp-resources:1.37.0-alpha
+  * Licensed under the Apache License, Version 2.0.
+  * git@github.com:open-telemetry/opentelemetry-java-contrib.git
+* io.opentelemetry.semconv:opentelemetry-semconv:1.29.0-alpha
+  * Licensed under the Apache License, Version 2.0.
+  * git@github.com:open-telemetry/semantic-conventions-java.git
+* io.opentelemetry:opentelemetry-api:1.62.0
+  * Licensed under the Apache License, Version 2.0.
+  * git@github.com:open-telemetry/opentelemetry-java.git
+* io.opentelemetry:opentelemetry-common:1.62.0
+  * Licensed under the Apache License, Version 2.0.
+  * git@github.com:open-telemetry/opentelemetry-java.git
+* io.opentelemetry:opentelemetry-context:1.62.0
+  * Licensed under the Apache License, Version 2.0.
+  * git@github.com:open-telemetry/opentelemetry-java.git
+* io.opentelemetry:opentelemetry-sdk-common:1.62.0
+  * Licensed under the Apache License, Version 2.0.
+  * git@github.com:open-telemetry/opentelemetry-java.git
+* io.opentelemetry:opentelemetry-sdk-extension-autoconfigure-spi:1.62.0
+  * Licensed under the Apache License, Version 2.0.
+  * git@github.com:open-telemetry/opentelemetry-java.git
+* io.opentelemetry:opentelemetry-sdk-logs:1.62.0
+  * Licensed under the Apache License, Version 2.0.
+  * git@github.com:open-telemetry/opentelemetry-java.git
+* io.opentelemetry:opentelemetry-sdk-metrics:1.62.0
+  * Licensed under the Apache License, Version 2.0.
+  * git@github.com:open-telemetry/opentelemetry-java.git
+* io.opentelemetry:opentelemetry-sdk-trace:1.62.0
+  * Licensed under the Apache License, Version 2.0.
+  * git@github.com:open-telemetry/opentelemetry-java.git
+* io.opentelemetry:opentelemetry-sdk:1.62.0
+  * Licensed under the Apache License, Version 2.0.
+  * git@github.com:open-telemetry/opentelemetry-java.git
+* io.perfmark:perfmark-api:0.27.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/perfmark/perfmark
+* org.apache.httpcomponents:httpclient:4.5.14
+  * Licensed under the Apache License, Version 2.0.
+  * http://hc.apache.org/httpcomponents-client-ga
+* org.apache.httpcomponents:httpcore:4.4.16
+  * Licensed under the Apache License, Version 2.0.
+  * http://hc.apache.org/httpcomponents-core-ga
+* org.checkerframework:checker-qual:3.49.0
+  * Licensed under the MIT License.
+  * https://github.com/typetools/checker-framework.git
+* org.codehaus.mojo:animal-sniffer-annotations:1.27
+  * Licensed under the MIT License.
+  * https://github.com/mojohaus/animal-sniffer/tree/master
+* org.codehaus.woodstox:stax2-api:4.3.0
+  * Licensed under the 3-Clause BSD License.
+  * http://github.com/FasterXML/stax2-api
+* org.conscrypt:conscrypt-openjdk-uber:2.6.2
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/google/conscrypt
+* org.jspecify:jspecify:1.0.0
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/jspecify/jspecify/
+* org.reactivestreams:reactive-streams:1.0.4
+  * Licensed under the MIT License.
+  * git@github.com:reactive-streams/reactive-streams.git
+* org.threeten:threeten-extra:1.8.0
+  * Licensed under the 3-Clause BSD License.
+  * https://github.com/ThreeTen/threeten-extra
+* org.threeten:threetenbp:1.7.0
+  * Licensed under the 3-Clause BSD License.
+  * https://github.com/ThreeTen/threetenbp
+* software.amazon.awssdk:annotations:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * ${scm.github.url}
+* software.amazon.awssdk:auth:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:aws-core:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:aws-query-protocol:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:checksums-spi:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:checksums:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:endpoints-spi:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * ${scm.github.url}
+* software.amazon.awssdk:http-auth-aws-eventstream:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:http-auth-aws:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:http-auth-spi:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:http-auth:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:http-client-spi:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * ${scm.github.url}
+* software.amazon.awssdk:identity-spi:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:json-utils:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:metrics-spi:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * ${scm.github.url}
+* software.amazon.awssdk:profiles:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:protocol-core:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:regions:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * ${scm.github.url}
+* software.amazon.awssdk:retries-spi:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * ${scm.github.url}
+* software.amazon.awssdk:retries:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * ${scm.github.url}
+* software.amazon.awssdk:sdk-core:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:sts:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:third-party-jackson-core:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * https://aws.amazon.com/sdkforjava
+* software.amazon.awssdk:url-connection-client:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * ${scm.github.url}
+* software.amazon.awssdk:utils:2.29.51
+  * Licensed under the Apache License, Version 2.0.
+  * ${scm.github.url}
+* software.amazon.eventstream:eventstream:1.0.1
+  * Licensed under the Apache License, Version 2.0.
+  * https://github.com/awslabs/aws-eventstream-java
+
 The gem distribution of this product includes software developed in a part of the Embulk project (https://www.embulk.org/).
 It has been licenced under the Apache Software License, Version 2.0.
 
@@ -14,53 +391,5 @@ They are licensed under the Apache Software License, Version 2.0.
 The gem distribution of this product includes JARs of the Jakarta Bean Validation API 1.1 (https://beanvalidation.org/1.1/), as-is.
 It is licensed under the Apache Software License, Version 2.0.
 
-The gem distribution of this product includes JAR of the JSR305 Annotations for Findbugs (https://code.google.com/archive/p/jsr-305/), as-is.
-It is licensed under the Apache Software License, Version 2.0.
-
-The gem distribution of this product includes JARs of Apache HttpClient, HttpCore, and Commons Codec, as-is.
-They are licensed under the Apache Software License, Version 2.0.
-
-The gem distribution of this product includes a JAR of Joda-Time (https://www.joda.org/joda-time/), as-is.
-It is licensed under the Apache Software License, Version 2.0.
-
 The gem distribution of this product includes a JAR of the JCL 1.2 implemented over SLF4J (http://www.slf4j.org/legacy.html) 1.7, as-is.
 It is licensed under the Apache Software License, Version 2.0.
-
-The gem distribution of this product includes a JAR of the ThreeTen Backport (https://www.threeten.org/threetenbp/), as-is.
-It is licensed under the 3-Clause "New" BSD License.
-
-The gem distribution of this product includes JAR of Guava (https://guava.dev/), as-is.
-It is licensed under the Apache Software License, Version 2.0.
-
-The gem distribution of this product includes JAR of GSON (https://github.com/google/gson), as-is.
-It is licensed under the Apache Software License, Version 2.0.
-
-The gem distribution of this product includes JARs of Protocol Buffers (https://developers.google.com/protocol-buffers), as-is.
-They are licensed under the 3-Clause "New" BSD License.
-
-The gem distribution of this product includes a JAR of AutoValue Processor, as-is.
-It is licensed under the Apache License, Version 2.0.
-
-The gem distribution of this product includes JARs of Google Cloud Clients (https://github.com/GoogleCloudPlatform/google-cloud-java/), as-is.
-They are licensed under the Apache Software License, Version 2.0.
-
-The gem distribution of this product includes JARs of Google APIs/HTTP/OAuth Client Libraries, as-is.
-They are licensed under the Apache Software License, Version 2.0.
-
-The gem distribution of this product includes a JAR of GAX (Google Api EXtensions), as-is.
-It is licensed under the 3-Clause "New" BSD License.
-
-The gem distribution of this product includes JARs of Google API Common, as-is.
-It is licensed under the 3-Clause "New" BSD License.
-
-The gem distribution of this product includes JARs of Proto Libraries for Google APIs, as-is.
-They are licensed under the Apache Software License, Version 2.0.
-
-The gem distribution of this product includes a JAR of Cloud Storage JSON API V1, as-is.
-It is licensed under the Apache License, Version 2.0.
-
-The gem distribution of this product includes JARs of Google Auth Libraries, as-is.
-They are licensed under the 3-Clause "New" BSD License.
-
-The gem distribution of this product includes a JAR of JSON in Java (https://github.com/stleary/JSON-java), as-is.
-It is licensed under the JSON License.

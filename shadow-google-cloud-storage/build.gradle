@@ -1,0 +1,92 @@
+/*
+ * A helper artifact that bundles the Google Cloud Storage client, the Google auth library and the AWS SDK (STS)
+ * with their conflicting transitive dependencies relocated.
+ *
+ * Embulk 0.9 forces plugins to use its own copies of Guava and Jackson ("parent-first" packages), which are far
+ * too old for the current Google client libraries. The packages below are relocated so that the plugin can carry
+ * its own copies without colliding with Embulk's. The recipe mirrors trocco-io/embulk-output-bigquery_java
+ * (shadow-google-cloud-bigquery-helper), which runs the same library generation on the Java 8 worker in production.
+ *
+ * Deliberately NOT relocated: com.google.auth, com.google.cloud, com.google.api.* — the storage client and the auth
+ * library must agree on these class names so credential objects can be passed between them.
+ */
+
+plugins {
+    id "java"
+    id "maven-publish"
+    id "com.github.johnrengelman.shadow"
+}
+
+repositories {
+    mavenCentral()
+}
+
+group = rootProject.group
+version = rootProject.version
+
+sourceCompatibility = 1.8
+targetCompatibility = 1.8
+
+// Prefer the "-jre" Guava variant over "-android" on a standard JVM.
+// https://github.com/google/guava/issues/6612#issuecomment-1614992368
+sourceSets.all {
+    configurations.getByName(runtimeClasspathConfigurationName) {
+        attributes.attribute(Attribute.of("org.gradle.jvm.environment", String), "standard-jvm")
+    }
+    configurations.getByName(compileClasspathConfigurationName) {
+        attributes.attribute(Attribute.of("org.gradle.jvm.environment", String), "standard-jvm")
+    }
+}
+
+configurations {
+    compileClasspath {
+        resolutionStrategy.activateDependencyLocking()
+    }
+    runtimeClasspath {
+        resolutionStrategy.activateDependencyLocking()
+    }
+    all {
+        // slf4j-api is provided by Embulk itself (parent-first); never bundle another copy.
+        exclude group: "org.slf4j", module: "slf4j-api"
+    }
+}
+
+dependencies {
+    implementation("com.google.cloud:google-cloud-storage:2.78.0") {
+        // Embulk is SLF4J-based; the root project provides jcl-over-slf4j instead of commons-logging.
+        exclude group: "commons-logging", module: "commons-logging"
+    }
+
+    // Google auth library: >= 1.23.0 is required for Workload Identity Federation with a custom AWS credentials
+    // supplier (AwsCredentials, AwsSecurityCredentialsSupplier, ImpersonatedCredentials).
+    implementation "com.google.auth:google-auth-library-oauth2-http:1.57.0"
+
+    // AWS SDK v2 STS client (AssumeRole with a per-connection session name) for Workload Identity Federation.
+    implementation platform("software.amazon.awssdk:bom:2.29.51")
+    implementation("software.amazon.awssdk:sts") {
+        exclude group: "software.amazon.awssdk", module: "netty-nio-client"
+        exclude group: "software.amazon.awssdk", module: "apache-client"
+    }
+    implementation "software.amazon.awssdk:url-connection-client"
+}
+
+shadowJar {
+    archiveBaseName = "${project.archivesBaseName}"
+    classifier = ""
+
+    // gRPC, OpenTelemetry and the AWS SDK register implementations through META-INF/services.
+    mergeServiceFiles()
+
+    // Multi-release overlays (META-INF/versions/9, 11, 17, 21) are never loaded on the Java 8 worker, and the
+    // Java 17+ ones cannot be processed by this shadow plugin version. Dropping them keeps the bundle Java 8 only.
+    exclude "META-INF/versions/**"
+
+    // Embulk "parent-first" packages (embulk-core/src/main/resources/embulk/parent_first_packages.properties).
+    relocate "com.google.common", "org.embulk.output.gcs.shadow.com.google.common"
+    relocate "com.google.thirdparty.publicsuffix", "org.embulk.output.gcs.shadow.com.google.thirdparty.publicsuffix"
+    relocate "com.fasterxml.jackson", "org.embulk.output.gcs.shadow.com.fasterxml.jackson"
+
+    // Internal dependencies of the Google client that depend on the relocated Guava.
+    relocate "io.opencensus", "org.embulk.output.gcs.shadow.io.opencensus"
+    relocate "io.grpc", "org.embulk.output.gcs.shadow.io.grpc"
+}
