@@ -35,6 +35,8 @@ import com.google.cloud.storage.StorageOptions;
 import com.google.cloud.storage.StorageRetryStrategy;
 import org.embulk.config.ConfigException;
 import org.embulk.util.config.units.LocalFile;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -48,6 +50,7 @@ import java.util.function.Function;
 
 public class GcsAuthentication
 {
+    private static final Logger logger = LoggerFactory.getLogger(GcsAuthentication.class);
     static final int CONNECT_TIMEOUT_MILLIS = 30000;
     static final int READ_TIMEOUT_MILLIS = 30000;
     private final Optional<String> serviceAccountEmail;
@@ -125,12 +128,18 @@ public class GcsAuthentication
                 .setReadTimeout(READ_TIMEOUT_MILLIS)
                 .build();
 
+        final int attempts = task.getMaxConnectionRetry() + 1;
+        // Retry every operation on transient failures, not only the idempotent ones, and say so in the log.
+        StorageRetryStrategy retryStrategy = new LoggingStorageRetryStrategy(
+                StorageRetryStrategy.getUniformStorageRetryStrategy(),
+                failure -> logger.warn("GCS request failed. Retrying (up to {} attempts). Message: {}: {}",
+                        attempts, failure.getClass(), failure.getMessage()));
+
         Storage client = StorageOptions.newBuilder()
                 .setCredentials(credentials)
                 .setTransportOptions(transportOptions)
                 .setRetrySettings(retrySettings(task))
-                // Retry every operation on transient failures, not only the idempotent ones.
-                .setStorageRetryStrategy(StorageRetryStrategy.getUniformStorageRetryStrategy())
+                .setStorageRetryStrategy(retryStrategy)
                 .build().getService();
 
         try {
