@@ -67,7 +67,7 @@ public class GcsTransactionalFileOutput implements TransactionalFileOutput
     {
         closeCurrentWriter();
         try {
-            String blobName = generateRemotePath(pathPrefix, sequenceFormat, taskIndex, fileIndex, pathSuffix);
+            String blobName = nextBlobName();
             blobId = BlobId.of(bucket, blobName);
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType(contentType).build();
             writer = client.writer(blobInfo);
@@ -134,6 +134,15 @@ public class GcsTransactionalFileOutput implements TransactionalFileOutput
         TaskReport report = CONFIG_MAPPER_FACTORY.newTaskReport();
         report.set("files", storageObjects);
         return report;
+    }
+
+    /**
+     * Advances the per-task file counter and returns the object name for the next file. Numbering starts at 1.
+     */
+    String nextBlobName()
+    {
+        fileIndex++;
+        return generateRemotePath(pathPrefix, sequenceFormat, taskIndex, fileIndex, pathSuffix);
     }
 
     /**

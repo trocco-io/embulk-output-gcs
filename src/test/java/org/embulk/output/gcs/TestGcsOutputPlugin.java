@@ -289,7 +289,8 @@ public class TestGcsOutputPlugin
             fail(ex.getMessage());
         }
 
-        String remotePath = GCP_PATH_PREFIX + String.format(task.getSequenceFormat(), 0, 0) + task.getFileNameExtension();
+        // The first file of a task is number 1, as in the 0.4.x line (see GcsTransactionalFileOutput#nextBlobName).
+        String remotePath = GCP_PATH_PREFIX + String.format(task.getSequenceFormat(), 0, 1) + task.getFileNameExtension();
         assertRecords(remotePath, client);
     }
 
