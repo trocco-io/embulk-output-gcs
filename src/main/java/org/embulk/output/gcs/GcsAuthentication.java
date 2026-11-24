@@ -155,18 +155,17 @@ public class GcsAuthentication
     /**
      * Retry budget for every call the client makes (bucket check, listing, deleting, upload chunks):
      * max_connection_retry retries after the first attempt, waits doubling from initial_retry_interval_millis
-     * up to maximum_retry_interval_millis.
+     * up to maximum_retry_interval_millis, and no time cap, as the plugin's former retry loop had none.
+     * The client treats a zero total timeout as unlimited.
      */
     static RetrySettings retrySettings(PluginTask task)
     {
-        int attempts = task.getMaxConnectionRetry() + 1;
-        long totalTimeoutMillis = (long) attempts * (task.getMaximumRetryIntervalMillis() + READ_TIMEOUT_MILLIS);
         return StorageOptions.getDefaultRetrySettings().toBuilder()
-                .setMaxAttempts(attempts)
+                .setMaxAttempts(task.getMaxConnectionRetry() + 1)
                 .setInitialRetryDelayDuration(Duration.ofMillis(task.getInitialRetryIntervalMillis()))
                 .setRetryDelayMultiplier(2.0)
                 .setMaxRetryDelayDuration(Duration.ofMillis(task.getMaximumRetryIntervalMillis()))
-                .setTotalTimeoutDuration(Duration.ofMillis(totalTimeoutMillis))
+                .setTotalTimeoutDuration(Duration.ZERO)
                 .build();
     }
 
