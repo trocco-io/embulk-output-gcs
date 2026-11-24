@@ -130,9 +130,10 @@ public class GcsAuthentication
 
         final int attempts = task.getMaxConnectionRetry() + 1;
         // Retry every operation on transient failures, not only the idempotent ones, and say so in the log.
+        // The client classifies every failure, the last one included, so the line must not promise a retry.
         StorageRetryStrategy retryStrategy = new LoggingStorageRetryStrategy(
                 StorageRetryStrategy.getUniformStorageRetryStrategy(),
-                failure -> logger.warn("GCS request failed. Retrying (up to {} attempts). Message: {}: {}",
+                failure -> logger.warn("GCS request failed with a retryable error (up to {} attempts). Message: {}: {}",
                         attempts, failure.getClass(), failure.getMessage()));
 
         Storage client = StorageOptions.newBuilder()

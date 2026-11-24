@@ -78,7 +78,8 @@ public class TestGcsAuthenticationRetrySettings
 
     /**
      * Against the real client and an endpoint that answers 503 to everything: exactly max_connection_retry + 1
-     * requests go out and the client's own budget summary names attempts only.
+     * requests go out, every retryable failure is reported (the last one included: the client classifies
+     * before it checks the budget), and the client's own budget summary names attempts only.
      */
     @Test
     public void theClientRetriesMaxConnectionRetryTimesWithNoTimeCap() throws IOException
@@ -109,6 +110,7 @@ public class TestGcsAuthenticationRetrySettings
             catch (StorageException ex) {
                 assertEquals(503, ex.getCode());
                 assertEquals("first attempt plus max_connection_retry retries", 3, requests.get());
+                assertEquals("each retryable failure is reported once", 3, retried.size());
                 String budget = budgetSummary(ex);
                 assertTrue(budget, budget.contains("attempts: 3, maxAttempts: 3"));
                 assertFalse("no time cap: " + budget, budget.contains("timeout"));
