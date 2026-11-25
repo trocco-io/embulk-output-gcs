@@ -20,6 +20,7 @@ import com.google.api.gax.paging.Page;
 import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.Storage;
+import com.google.cloud.storage.StorageException;
 import org.embulk.config.ConfigDiff;
 import org.embulk.config.ConfigException;
 import org.embulk.config.ConfigSource;
@@ -31,14 +32,10 @@ import org.embulk.util.config.ConfigMapper;
 import org.embulk.util.config.ConfigMapperFactory;
 import org.embulk.util.config.TaskMapper;
 import org.embulk.util.config.units.LocalFile;
-import org.embulk.util.retryhelper.RetryExecutor;
-import org.embulk.util.retryhelper.RetryGiveupException;
-import org.embulk.util.retryhelper.Retryable;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
 import java.io.IOException;
-import java.io.InterruptedIOException;
 import java.lang.invoke.MethodHandles;
 import java.security.GeneralSecurityException;
 import java.util.ArrayList;
@@ -137,138 +134,44 @@ public class GcsOutputPlugin implements FileOutputPlugin
 
     public void deleteFiles(PluginTask task)
     {
+        deleteFiles(createClient(task), task);
+    }
+
+    // Package-private so a test can pass in a client pointed at a local endpoint.
+    void deleteFiles(Storage client, PluginTask task)
+    {
         logger.info("Start delete files operation");
-        Storage client = createClient(task);
+        // Transient failures are retried inside the client (see GcsAuthentication#retrySettings).
         try {
-            List<BlobId> blobIds = listObjectsWithRetry(client, task.getBucket(), task.getPathPrefix(), task.getMaxConnectionRetry());
+            List<BlobId> blobIds = listObjects(client, task.getBucket(), task.getPathPrefix());
             if (blobIds.isEmpty()) {
                 logger.info("no files were found");
                 return;
             }
             for (BlobId blobId : blobIds) {
-                deleteObjectWithRetry(client, blobId, task.getMaxConnectionRetry());
+                client.delete(blobId);
                 logger.info("delete file: {}/{}", blobId.getBucket(), blobId.getName());
             }
         }
-        catch (IOException ex) {
-            throw new ConfigException(ex);
-        }
-    }
-
-    private List<BlobId> listObjectsWithRetry(Storage client, String bucket, String prefix, int maxConnectionRetry) throws IOException
-    {
-        try {
-            return RetryExecutor.builder()
-                    .withRetryLimit(maxConnectionRetry)
-                    .withInitialRetryWaitMillis(500)
-                    .withMaxRetryWaitMillis(30 * 1000)
-                    .build()
-                    .runInterruptible(new Retryable<List<BlobId>>() {
-                        @Override
-                        public List<BlobId> call() throws IOException
-                        {
-                            // https://cloud.google.com/storage/docs/samples/storage-list-files-with-prefix#storage_list_files_with_prefix-java
-                            Page<Blob> list = client.list(bucket, Storage.BlobListOption.prefix(prefix), Storage.BlobListOption.currentDirectory());
-                            List<BlobId> blobIds = new ArrayList<>();
-                            list.iterateAll().forEach(x -> blobIds.add(x.getBlobId()));
-                            return blobIds;
-                        }
-
-                        @Override
-                        public boolean isRetryableException(Exception exception)
-                        {
-                            return true;
-                        }
-
-                        @Override
-                        public void onRetry(Exception exception, int retryCount, int retryLimit, int retryWait) throws RetryGiveupException
-                        {
-                            String message = String.format("GCS list request failed. Retrying %d/%d after %d seconds. Message: %s: %s",
-                                    retryCount, retryLimit, retryWait / 1000, exception.getClass(), exception.getMessage());
-                            if (retryCount % 3 == 0) {
-                                logger.warn(message, exception);
-                            }
-                            else {
-                                logger.warn(message);
-                            }
-                        }
-
-                        @Override
-                        public void onGiveup(Exception firstException, Exception lastException) throws RetryGiveupException
-                        {
-                        }
-                    });
-        }
-        catch (RetryGiveupException ex) {
-            throw propagate(ex.getCause());
-        }
-        catch (InterruptedException ex) {
-            throw new InterruptedIOException();
-        }
-    }
-
-    private Void deleteObjectWithRetry(Storage client, BlobId blobId, int maxConnectionRetry) throws IOException
-    {
-        try {
-            return RetryExecutor.builder()
-                    .withRetryLimit(maxConnectionRetry)
-                    .withInitialRetryWaitMillis(500)
-                    .withMaxRetryWaitMillis(30 * 1000)
-                    .build()
-                    .runInterruptible(new Retryable<Void>() {
-                        @Override
-                        public Void call() throws IOException
-                        {
-                            client.delete(blobId);
-                            return null;
-                        }
-
-                        @Override
-                        public boolean isRetryableException(Exception exception)
-                        {
-                            return true;
-                        }
-
-                        @Override
-                        public void onRetry(Exception exception, int retryCount, int retryLimit, int retryWait) throws RetryGiveupException
-                        {
-                            String message = String.format("GCS delete request failed. Retrying %d/%d after %d seconds. Message: %s: %s",
-                                    retryCount, retryLimit, retryWait / 1000, exception.getClass(), exception.getMessage());
-                            if (retryCount % 3 == 0) {
-                                logger.warn(message, exception);
-                            }
-                            else {
-                                logger.warn(message);
-                            }
-                        }
-
-                        @Override
-                        public void onGiveup(Exception firstException, Exception lastException) throws RetryGiveupException
-                        {
-                        }
-                    });
-        }
-        catch (RetryGiveupException ex) {
-            throw propagate(ex.getCause());
-        }
-        catch (InterruptedException ex) {
-            throw new InterruptedIOException();
+        catch (StorageException ex) {
+            throw GcsAuthentication.configExceptionIfClientError(ex);
         }
     }
 
     /**
-     * Rethrows {@code t} as-is if it is a {@link RuntimeException} or an {@link Error}, otherwise wrapped in a
-     * {@link RuntimeException}. Same semantics as Guava's {@code Throwables.propagate}, which is no longer on the
-     * plugin's compile classpath (Guava is bundled and relocated inside the shadow JAR).
+     * Objects directly under the prefix. With the "/" delimiter the client also returns each sub-prefix
+     * as a directory entry (isDirectory(), no generation); those are skipped, so folder placeholders
+     * (zero-byte "name/" objects) and the objects inside folders stay.
      */
-    private static RuntimeException propagate(final Throwable t)
+    private List<BlobId> listObjects(Storage client, String bucket, String prefix)
     {
-        if (t instanceof RuntimeException) {
-            throw (RuntimeException) t;
+        Page<Blob> list = client.list(bucket, Storage.BlobListOption.prefix(prefix), Storage.BlobListOption.currentDirectory());
+        List<BlobId> blobIds = new ArrayList<>();
+        for (Blob blob : list.iterateAll()) {
+            if (!blob.isDirectory()) {
+                blobIds.add(blob.getBlobId());
+            }
         }
-        if (t instanceof Error) {
-            throw (Error) t;
-        }
-        throw new RuntimeException(t);
+        return blobIds;
     }
 }

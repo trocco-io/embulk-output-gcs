@@ -17,7 +17,6 @@
 package org.embulk.output.gcs;
 
 import com.google.cloud.WriteChannel;
-import com.google.cloud.storage.Blob;
 import com.google.cloud.storage.BlobId;
 import com.google.cloud.storage.BlobInfo;
 import com.google.cloud.storage.Storage;
@@ -49,6 +48,10 @@ public class GcsTransactionalFileOutput implements TransactionalFileOutput
     private BlobId blobId = null;
     private int fileIndex = 0;
     private WriteChannel writer = null;
+    // Set once an upload has been abandoned after an error. The error is already propagating; the
+    // formatter still flushes and finishes the file while closing, and those calls must not touch
+    // the dropped writer or report an upload that never happened.
+    private boolean abandoned = false;
     private long byteCount = 0;
     private long totalByte = 0;
 
@@ -67,12 +70,14 @@ public class GcsTransactionalFileOutput implements TransactionalFileOutput
     {
         closeCurrentWriter();
         try {
-            String blobName = generateRemotePath(pathPrefix, sequenceFormat, taskIndex, fileIndex, pathSuffix);
+            String blobName = nextBlobName();
             blobId = BlobId.of(bucket, blobName);
             BlobInfo blobInfo = BlobInfo.newBuilder(blobId).setContentType(contentType).build();
             writer = client.writer(blobInfo);
         }
         catch (Exception ex) {
+            writer = null;
+            abandoned = true;
             throw new RuntimeException(ex);
         }
     }
@@ -80,6 +85,10 @@ public class GcsTransactionalFileOutput implements TransactionalFileOutput
     @Override
     public void add(Buffer buffer)
     {
+        if (abandoned) {
+            // Embulk offers the buffer of the failed call again on close; it was released then.
+            return;
+        }
         try {
             writer.write(ByteBuffer.wrap(buffer.array(), buffer.offset(), buffer.limit()));
             byteCount = byteCount + buffer.limit();
@@ -91,14 +100,10 @@ public class GcsTransactionalFileOutput implements TransactionalFileOutput
             }
         }
         catch (Exception ex) {
-            //clean up file if exist
-            try {
-                boolean deleted = client.delete(blobId);
-                logger.info("  Delete file: {} > deleted? {}", blobId.getName(), deleted);
-            }
-            catch (Exception e) {
-                logger.warn("Failed to delete file: {}, error message: {}", blobId.getName(), e.getMessage());
-            }
+            // Abandon the upload session. Nothing exists under the object name until the upload is
+            // finalized, so the object from the previous run stays as it is.
+            writer = null;
+            abandoned = true;
             throw new RuntimeException(ex);
         }
         finally {
@@ -109,18 +114,23 @@ public class GcsTransactionalFileOutput implements TransactionalFileOutput
     @Override
     public void finish()
     {
+        if (abandoned) {
+            return;
+        }
         logger.info("Uploaded total {} bytes.", totalByte + byteCount);
         closeCurrentWriter();
-        //query blob again to check
-        Blob blob = client.get(blobId);
         logger.info("Upload {} successfully.", blobId.getName());
-        storageObjects.add(blob.getBlobId().toString());
+        storageObjects.add(blobId.toString());
     }
 
     @Override
     public void close()
     {
-        closeCurrentWriter();
+        // finish() normally runs before close(), also when a task fails upstream: the CSV formatter
+        // finishes the file output while closing. close() without finish() means writing or finishing
+        // this file itself failed. That upload is abandoned rather than finalized, so the previous
+        // object stays as it is.
+        writer = null;
     }
 
     @Override
@@ -134,6 +144,15 @@ public class GcsTransactionalFileOutput implements TransactionalFileOutput
         TaskReport report = CONFIG_MAPPER_FACTORY.newTaskReport();
         report.set("files", storageObjects);
         return report;
+    }
+
+    /**
+     * Advances the per-task file counter and returns the object name for the next file. Numbering starts at 1.
+     */
+    String nextBlobName()
+    {
+        fileIndex++;
+        return generateRemotePath(pathPrefix, sequenceFormat, taskIndex, fileIndex, pathSuffix);
     }
 
     /**
