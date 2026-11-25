@@ -134,8 +134,13 @@ public class GcsOutputPlugin implements FileOutputPlugin
 
     public void deleteFiles(PluginTask task)
     {
+        deleteFiles(createClient(task), task);
+    }
+
+    // Package-private so a test can pass in a client pointed at a local endpoint.
+    void deleteFiles(Storage client, PluginTask task)
+    {
         logger.info("Start delete files operation");
-        Storage client = createClient(task);
         // Transient failures are retried inside the client (see GcsAuthentication#retrySettings).
         try {
             List<BlobId> blobIds = listObjects(client, task.getBucket(), task.getPathPrefix());
@@ -153,12 +158,20 @@ public class GcsOutputPlugin implements FileOutputPlugin
         }
     }
 
+    /**
+     * Objects directly under the prefix. With the "/" delimiter the client also returns each sub-prefix
+     * as a directory entry (isDirectory(), no generation); those are skipped, so folder placeholders
+     * (zero-byte "name/" objects) and the objects inside folders stay.
+     */
     private List<BlobId> listObjects(Storage client, String bucket, String prefix)
     {
-        // https://cloud.google.com/storage/docs/samples/storage-list-files-with-prefix#storage_list_files_with_prefix-java
         Page<Blob> list = client.list(bucket, Storage.BlobListOption.prefix(prefix), Storage.BlobListOption.currentDirectory());
         List<BlobId> blobIds = new ArrayList<>();
-        list.iterateAll().forEach(x -> blobIds.add(x.getBlobId()));
+        for (Blob blob : list.iterateAll()) {
+            if (!blob.isDirectory()) {
+                blobIds.add(blob.getBlobId());
+            }
+        }
         return blobIds;
     }
 }
